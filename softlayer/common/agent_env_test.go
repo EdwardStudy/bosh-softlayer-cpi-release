@@ -181,7 +181,6 @@ var _ = Describe("AgentEnv", func() {
 
 						DNS:           []string{"fake-dns"},
 						Default:       []string{"fake-default"},
-						Preconfigured: true,
 
 						MAC: "fake-mac",
 

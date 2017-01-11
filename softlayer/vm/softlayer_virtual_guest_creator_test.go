@@ -8,6 +8,8 @@ import (
 	. "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/common"
 	. "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/vm"
 
+	"github.com/cloudfoundry/bosh-softlayer-cpi/api"
+
 	testhelpers "github.com/cloudfoundry/bosh-softlayer-cpi/test_helpers"
 
 	fakescommon "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/common/fakes"
@@ -19,7 +21,6 @@ import (
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 
-	slh "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/common/helper"
 	sldatatypes "github.com/maximilien/softlayer-go/data_types"
 )
 
@@ -44,8 +45,8 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 		fakeVmFinder = &fakescommon.FakeVMFinder{}
 		fakeVm = &fakescommon.FakeVM{}
 
-		slh.TIMEOUT = 2 * time.Second
-		slh.POLLING_INTERVAL = 1 * time.Second
+		api.TIMEOUT = 2 * time.Second
+		api.POLLING_INTERVAL = 1 * time.Second
 	})
 
 	Describe("#Create", func() {
@@ -92,7 +93,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 									"fake-dns1",
 								},
 								Default:         []string{},
-								Preconfigured:   true,
 								CloudProperties: map[string]interface{}{},
 							},
 						}
@@ -117,14 +117,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 							DedicatedAccountHostOnlyFlag: true,
 							PrivateNetworkOnlyFlag:       false,
 							SshKeys:                      []sldatatypes.SshKey{{Id: 74826}},
-							BlockDevices: []sldatatypes.BlockDevice{{
-								Device:    "0",
-								DiskImage: sldatatypes.DiskImage{Capacity: 100}}},
-							NetworkComponents: []sldatatypes.NetworkComponents{{MaxSpeed: 1000}},
-							PrimaryNetworkComponent: sldatatypes.PrimaryNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							PrimaryBackendNetworkComponent: sldatatypes.PrimaryBackendNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
 						}
 						expectedCmdResults := []string{
 							"",
@@ -157,14 +149,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 							DedicatedAccountHostOnlyFlag: true,
 							PrivateNetworkOnlyFlag:       false,
 							SshKeys:                      []sldatatypes.SshKey{{Id: 74826}},
-							BlockDevices: []sldatatypes.BlockDevice{{
-								Device:    "0",
-								DiskImage: sldatatypes.DiskImage{Capacity: 100}}},
-							NetworkComponents: []sldatatypes.NetworkComponents{{MaxSpeed: 1000}},
-							PrimaryNetworkComponent: sldatatypes.PrimaryNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							PrimaryBackendNetworkComponent: sldatatypes.PrimaryBackendNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
 						}
 						expectedCmdResults := []string{
 							"",
@@ -195,14 +179,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 							DedicatedAccountHostOnlyFlag: true,
 							PrivateNetworkOnlyFlag:       false,
 							SshKeys:                      []sldatatypes.SshKey{{Id: 74826}},
-							BlockDevices: []sldatatypes.BlockDevice{{
-								Device:    "0",
-								DiskImage: sldatatypes.DiskImage{Capacity: 100}}},
-							NetworkComponents: []sldatatypes.NetworkComponents{{MaxSpeed: 1000}},
-							PrimaryNetworkComponent: sldatatypes.PrimaryNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							PrimaryBackendNetworkComponent: sldatatypes.PrimaryBackendNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
 						}
 
 						expectedCmdResults := []string{
@@ -234,7 +210,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 									"fake-dns1",
 								},
 								Default:         []string{},
-								Preconfigured:   true,
 								CloudProperties: map[string]interface{}{},
 							},
 						}
@@ -257,7 +232,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 									"fake-dns1",
 								},
 								Default:         []string{},
-								Preconfigured:   true,
 								CloudProperties: map[string]interface{}{},
 							},
 						}
@@ -282,14 +256,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 							DedicatedAccountHostOnlyFlag: true,
 							PrivateNetworkOnlyFlag:       false,
 							SshKeys:                      []sldatatypes.SshKey{{Id: 74826}},
-							BlockDevices: []sldatatypes.BlockDevice{{
-								Device:    "0",
-								DiskImage: sldatatypes.DiskImage{Capacity: 100}}},
-							NetworkComponents: []sldatatypes.NetworkComponents{{MaxSpeed: 1000}},
-							PrimaryNetworkComponent: sldatatypes.PrimaryNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							PrimaryBackendNetworkComponent: sldatatypes.PrimaryBackendNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
 						}
 						expectedCmdResults := []string{
 							"",
@@ -316,7 +282,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 									"fake-dns1",
 								},
 								Default:         []string{},
-								Preconfigured:   true,
 								CloudProperties: map[string]interface{}{},
 							},
 						}
@@ -342,12 +307,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 							BlockDevices: []sldatatypes.BlockDevice{{
 								Device:    "0",
 								DiskImage: sldatatypes.DiskImage{Capacity: 100}}},
-							NetworkComponents: []sldatatypes.NetworkComponents{{MaxSpeed: 1000}},
-							PrimaryNetworkComponent: sldatatypes.PrimaryNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							PrimaryBackendNetworkComponent: sldatatypes.PrimaryBackendNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							DisableOsReload: true,
 						}
 						expectedCmdResults := []string{
 							"",
@@ -384,10 +343,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 								Device:    "0",
 								DiskImage: sldatatypes.DiskImage{Capacity: 100}}},
 							NetworkComponents: []sldatatypes.NetworkComponents{{MaxSpeed: 1000}},
-							PrimaryNetworkComponent: sldatatypes.PrimaryNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							PrimaryBackendNetworkComponent: sldatatypes.PrimaryBackendNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
 						}
 						expectedCmdResults := []string{
 							"",
@@ -422,10 +377,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 								Device:    "0",
 								DiskImage: sldatatypes.DiskImage{Capacity: 100}}},
 							NetworkComponents: []sldatatypes.NetworkComponents{{MaxSpeed: 1000}},
-							PrimaryNetworkComponent: sldatatypes.PrimaryNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							PrimaryBackendNetworkComponent: sldatatypes.PrimaryBackendNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
 						}
 
 						expectedCmdResults := []string{
@@ -479,7 +430,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 									"fake-dns1",
 								},
 								Default:         []string{},
-								Preconfigured:   true,
 								CloudProperties: map[string]interface{}{},
 							},
 						}
@@ -508,10 +458,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 								Device:    "0",
 								DiskImage: sldatatypes.DiskImage{Capacity: 100}}},
 							NetworkComponents: []sldatatypes.NetworkComponents{{MaxSpeed: 1000}},
-							PrimaryNetworkComponent: sldatatypes.PrimaryNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							PrimaryBackendNetworkComponent: sldatatypes.PrimaryBackendNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
 						}
 						expectedCmdResults := []string{
 							"",
@@ -547,10 +493,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 								Device:    "0",
 								DiskImage: sldatatypes.DiskImage{Capacity: 100}}},
 							NetworkComponents: []sldatatypes.NetworkComponents{{MaxSpeed: 1000}},
-							PrimaryNetworkComponent: sldatatypes.PrimaryNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							PrimaryBackendNetworkComponent: sldatatypes.PrimaryBackendNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
 						}
 						expectedCmdResults := []string{
 							"",
@@ -585,11 +527,6 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 								Device:    "0",
 								DiskImage: sldatatypes.DiskImage{Capacity: 100}}},
 							NetworkComponents: []sldatatypes.NetworkComponents{{MaxSpeed: 1000}},
-							PrimaryNetworkComponent: sldatatypes.PrimaryNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							PrimaryBackendNetworkComponent: sldatatypes.PrimaryBackendNetworkComponent{
-								NetworkVlan: sldatatypes.NetworkVlan{Id: 524956}},
-							DisableOsReload: true,
 						}
 
 						expectedCmdResults := []string{

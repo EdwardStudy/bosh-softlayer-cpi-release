@@ -5,7 +5,10 @@ import (
 	"net"
 	"time"
 
-	strfmt "github.com/go-openapi/strfmt"
+	"github.com/cloudfoundry/bosh-softlayer-cpi/api"
+	"github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/pool/models"
+	"github.com/cloudfoundry/bosh-softlayer-cpi/util"
+	"github.com/go-openapi/strfmt"
 
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
@@ -17,11 +20,8 @@ import (
 	slhelper "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/common/helper"
 	operations "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/pool/client/vm"
 	bslcstem "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/stemcell"
-	util "github.com/cloudfoundry/bosh-softlayer-cpi/util"
 
 	. "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/common"
-
-	"github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/pool/models"
 )
 
 const SOFTLAYER_POOL_CREATOR_LOG_TAG = "SoftLayerPoolCreator"
@@ -40,9 +40,6 @@ type softLayerPoolCreator struct {
 }
 
 func NewSoftLayerPoolCreator(vmFinder VMFinder, softLayerVmPoolClient operations.SoftLayerPoolClient, softLayerClient sl.Client, agentOptions AgentOptions, featureOptions FeatureOptions, registryOptions RegistryOptions, logger boshlog.Logger) VMCreator {
-	slhelper.TIMEOUT = 120 * time.Minute
-	slhelper.POLLING_INTERVAL = 5 * time.Second
-
 	return &softLayerPoolCreator{
 		softLayerVmPoolClient: softLayerVmPoolClient,
 		softLayerClient:       softLayerClient,
@@ -55,6 +52,9 @@ func NewSoftLayerPoolCreator(vmFinder VMFinder, softLayerVmPoolClient operations
 }
 
 func (c *softLayerPoolCreator) Create(agentID string, stemcell bslcstem.Stemcell, cloudProps VMCloudProperties, networks Networks, env Environment) (VM, error) {
+	api.TIMEOUT = 120 * time.Minute
+	api.POLLING_INTERVAL = 5 * time.Second
+
 	for _, network := range networks {
 		switch network.Type {
 		case "dynamic":
@@ -74,8 +74,21 @@ func (c *softLayerPoolCreator) Create(agentID string, stemcell bslcstem.Stemcell
 
 // Private methods
 func (c *softLayerPoolCreator) createFromVMPool(agentID string, stemcell bslcstem.Stemcell, cloudProps VMCloudProperties, networks Networks, env Environment) (VM, error) {
-	var err error
-	virtualGuestTemplate, err := CreateVirtualGuestTemplate(stemcell, cloudProps, networks, CreateUserDataForInstance(agentID, networks, c.registryOptions))
+	userDataTypeContents, err := CreateUserDataForInstance(agentID, c.registryOptions)
+	if err != nil {
+		return nil, bosherr.WrapError(err, "Creating VirtualGuest UserData")
+	}
+
+	publicVlanId, privateVlanId, err := slhelper.GetVlanIds(c.softLayerClient, networks)
+	if err != nil {
+		return nil, bosherr.WrapError(err, "Getting Vlan Ids from networks settings")
+	}
+
+	virtualGuestTemplate, err := CreateVirtualGuestTemplate(stemcell.Uuid(), cloudProps, userDataTypeContents, publicVlanId, privateVlanId)
+	if err != nil {
+		return nil, bosherr.WrapError(err, "Creating VirtualGuest template")
+	}
+
 	filter := &models.VMFilter{
 		CPU:         int32(virtualGuestTemplate.StartCpus),
 		MemoryMb:    int32(virtualGuestTemplate.MaxMemory),
@@ -150,7 +163,17 @@ func (c *softLayerPoolCreator) createFromVMPool(agentID string, stemcell bslcste
 }
 
 func (c *softLayerPoolCreator) createBySoftlayer(agentID string, stemcell bslcstem.Stemcell, cloudProps VMCloudProperties, networks Networks, env Environment) (VM, error) {
-	virtualGuestTemplate, err := CreateVirtualGuestTemplate(stemcell, cloudProps, networks, CreateUserDataForInstance(agentID, networks, c.registryOptions))
+	userDataTypeContents, err := CreateUserDataForInstance(agentID, c.registryOptions)
+	if err != nil {
+		return nil, bosherr.WrapError(err, "Creating VirtualGuest UserData")
+	}
+
+	publicVlanId, privateVlanId, err := slhelper.GetVlanIds(c.softLayerClient, networks)
+	if err != nil {
+		return nil, bosherr.WrapError(err, "Getting Vlan Ids from networks settings")
+	}
+
+	virtualGuestTemplate, err := CreateVirtualGuestTemplate(stemcell.Uuid(), cloudProps, userDataTypeContents, publicVlanId, privateVlanId)
 	if err != nil {
 		return nil, bosherr.WrapError(err, "Creating VirtualGuest template")
 	}
@@ -203,7 +226,7 @@ func (c *softLayerPoolCreator) createBySoftlayer(agentID string, stemcell bslcst
 		}
 	}
 
-	vm.ConfigureNetworks2(networks)
+	vm.ConfigureNetworks(networks)
 
 	agentEnv := CreateAgentUserData(agentID, cloudProps, networks, env, c.agentOptions)
 
@@ -255,7 +278,7 @@ func (c *softLayerPoolCreator) createByOSReload(agentID string, stemcell bslcste
 		return nil, bosherr.WrapErrorf(err, "Cannot find virtualGuest with id: %d", virtualGuest.Id)
 	}
 
-	slhelper.TIMEOUT = 4 * time.Hour
+	api.TIMEOUT = 4 * time.Hour
 	err = vm.ReloadOS(stemcell)
 	if err != nil {
 		return nil, bosherr.WrapError(err, "Failed to reload OS")
@@ -299,7 +322,7 @@ func (c *softLayerPoolCreator) createByOSReload(agentID string, stemcell bslcste
 		return nil, bosherr.WrapErrorf(err, "refresh VM with id: %d after os_reload", virtualGuest.Id)
 	}
 
-	vm.ConfigureNetworks2(networks)
+	vm.ConfigureNetworks(networks)
 
 	agentEnv := CreateAgentUserData(agentID, cloudProps, networks, env, c.agentOptions)
 	if err != nil {
@@ -326,7 +349,7 @@ func (c *softLayerPoolCreator) oSReloadVMInPool(cid int, agentID string, stemcel
 		return nil, bosherr.WrapErrorf(err, "Cannot find virtualGuest with id: %d", cid)
 	}
 
-	slhelper.TIMEOUT = 4 * time.Hour
+	api.TIMEOUT = 4 * time.Hour
 	err = vm.ReloadOS(stemcell)
 	if err != nil {
 		return nil, bosherr.WrapErrorf(err, "Failed to do os_reload against %d", cid)
@@ -376,7 +399,7 @@ func (c *softLayerPoolCreator) oSReloadVMInPool(cid int, agentID string, stemcel
 		return nil, bosherr.WrapErrorf(err, "refresh VM with id: %d after os_reload", cid)
 	}
 
-	vm.ConfigureNetworks2(networks)
+	vm.ConfigureNetworks(networks)
 
 	agentEnv := CreateAgentUserData(agentID, cloudProps, networks, env, c.agentOptions)
 	if err != nil {

@@ -4,12 +4,11 @@ import (
 	"fmt"
 	"time"
 
+	. "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/common"
+	"github.com/cloudfoundry/bosh-softlayer-cpi/api"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
-
 	bmslc "github.com/cloudfoundry-community/bosh-softlayer-tools/clients"
-	. "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/common"
-	slh "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/common/helper"
 	bslcstem "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/stemcell"
 	sl "github.com/maximilien/softlayer-go/softlayer"
 )
@@ -25,9 +24,6 @@ type baremetalCreator struct {
 }
 
 func NewBaremetalCreator(vmFinder VMFinder, softLayerClient sl.Client, bmsClient bmslc.BmpClient, agentOptions AgentOptions, logger boshlog.Logger) VMCreator {
-	slh.TIMEOUT = 15 * time.Minute
-	slh.POLLING_INTERVAL = 5 * time.Second
-
 	return &baremetalCreator{
 		vmFinder:        vmFinder,
 		softLayerClient: softLayerClient,
@@ -38,6 +34,9 @@ func NewBaremetalCreator(vmFinder VMFinder, softLayerClient sl.Client, bmsClient
 }
 
 func (c *baremetalCreator) Create(agentID string, stemcell bslcstem.Stemcell, cloudProps VMCloudProperties, networks Networks, env Environment) (VM, error) {
+	api.TIMEOUT = 15 * time.Minute
+	api.POLLING_INTERVAL = 5 * time.Second
+
 	for _, network := range networks {
 		switch network.Type {
 		case "dynamic":
@@ -176,9 +175,9 @@ func (c *baremetalCreator) provisionBaremetal(server_name string, stemcell strin
 	}
 
 	task_id := createBaremetalResponse.Data.TaskId
-	slh.TIMEOUT = 120 * time.Minute
+	api.TIMEOUT = 120 * time.Minute
 	totalTime := time.Duration(0)
-	for totalTime < slh.TIMEOUT {
+	for totalTime < api.TIMEOUT {
 
 		taskOutput, err := c.bmsClient.TaskJsonOutput(task_id, "task")
 		if err != nil {
@@ -198,8 +197,8 @@ func (c *baremetalCreator) provisionBaremetal(server_name string, stemcell strin
 			info = serverOutput.Data["info"].(map[string]interface{})
 			return int(info["id"].(float64)), nil
 		default:
-			totalTime += slh.POLLING_INTERVAL
-			time.Sleep(slh.POLLING_INTERVAL)
+			totalTime += api.POLLING_INTERVAL
+			time.Sleep(api.POLLING_INTERVAL)
 		}
 	}
 

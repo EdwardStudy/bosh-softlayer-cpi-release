@@ -2,6 +2,8 @@ package common
 
 import (
 	"bytes"
+	"encoding/json"
+	"encoding/base64"
 	"fmt"
 	"net"
 	"net/url"
@@ -11,13 +13,8 @@ import (
 	"time"
 
 	sldatatypes "github.com/maximilien/softlayer-go/data_types"
-
-	bslcstem "github.com/cloudfoundry/bosh-softlayer-cpi/softlayer/stemcell"
-
 	boshlog "github.com/cloudfoundry/bosh-utils/logger"
 	boshsys "github.com/cloudfoundry/bosh-utils/system"
-
-	"encoding/json"
 	bosherr "github.com/cloudfoundry/bosh-utils/errors"
 	sl "github.com/maximilien/softlayer-go/softlayer"
 )
@@ -39,43 +36,22 @@ func TimeStampForTime(now time.Time) string {
 	return now.Format("20060102-030405-") + strconv.Itoa(int(now.UnixNano()/1e6-now.Unix()*1e3))
 }
 
-func CreateVirtualGuestTemplate(stemcell bslcstem.Stemcell, cloudProps VMCloudProperties, networks Networks, userData string) (sldatatypes.SoftLayer_Virtual_Guest_Template, error) {
-	for _, network := range networks {
-		switch network.Type {
-		case "dynamic":
-			if value, ok := network.CloudProperties["PrimaryNetworkComponent"]; ok {
-				networkComponent := value.(map[string]interface{})
-				if value1, ok := networkComponent["NetworkVlan"]; ok {
-					networkValn := value1.(map[string]interface{})
-					if value2, ok := networkValn["Id"]; ok {
-						cloudProps.PrimaryNetworkComponent = sldatatypes.PrimaryNetworkComponent{
-							NetworkVlan: sldatatypes.NetworkVlan{
-								Id: int(value2.(float64)),
-							},
-						}
-					}
-				}
-			}
-			if value, ok := network.CloudProperties["PrimaryBackendNetworkComponent"]; ok {
-				networkComponent := value.(map[string]interface{})
-				if value1, ok := networkComponent["NetworkVlan"]; ok {
-					networkValn := value1.(map[string]interface{})
-					if value2, ok := networkValn["Id"]; ok {
-						cloudProps.PrimaryBackendNetworkComponent = sldatatypes.PrimaryBackendNetworkComponent{
-							NetworkVlan: sldatatypes.NetworkVlan{
-								Id: int(value2.(float64)),
-							},
-						}
-					}
-				}
-			}
-			if value, ok := network.CloudProperties["PrivateNetworkOnlyFlag"]; ok {
-				privateOnly := value.(bool)
-				cloudProps.PrivateNetworkOnlyFlag = privateOnly
-			}
-		default:
-			continue
+func CreateVirtualGuestTemplate(stemcellUuid string, cloudProps VMCloudProperties, userData string, publicVlanId int, privateVlanId int) (sldatatypes.SoftLayer_Virtual_Guest_Template, error) {
+	var publicNetworkComponent *sldatatypes.PrimaryNetworkComponent
+	var privateNetworkComponent *sldatatypes.PrimaryBackendNetworkComponent
+
+	if publicVlanId != 0 {
+		publicNetworkComponent = &sldatatypes.PrimaryNetworkComponent{
+			NetworkVlan: sldatatypes.NetworkVlan{
+				Id: publicVlanId,
+			},
 		}
+	}
+
+	privateNetworkComponent = &sldatatypes.PrimaryBackendNetworkComponent{
+		NetworkVlan: sldatatypes.NetworkVlan{
+			Id: privateVlanId,
+		},
 	}
 
 	virtualGuestTemplate := sldatatypes.SoftLayer_Virtual_Guest_Template{
@@ -85,11 +61,11 @@ func CreateVirtualGuestTemplate(stemcell bslcstem.Stemcell, cloudProps VMCloudPr
 		MaxMemory: cloudProps.MaxMemory,
 
 		Datacenter: sldatatypes.Datacenter{
-			Name: cloudProps.Datacenter.Name,
+			Name: cloudProps.Datacenter,
 		},
 
 		BlockDeviceTemplateGroup: &sldatatypes.BlockDeviceTemplateGroup{
-			GlobalIdentifier: stemcell.Uuid(),
+			GlobalIdentifier: stemcellUuid,
 		},
 
 		SshKeys: cloudProps.SshKeys,
@@ -98,17 +74,10 @@ func CreateVirtualGuestTemplate(stemcell bslcstem.Stemcell, cloudProps VMCloudPr
 		LocalDiskFlag:     cloudProps.LocalDiskFlag,
 
 		DedicatedAccountHostOnlyFlag:   cloudProps.DedicatedAccountHostOnlyFlag,
-		BlockDevices:                   cloudProps.BlockDevices,
 		NetworkComponents:              cloudProps.NetworkComponents,
-		PrivateNetworkOnlyFlag:         cloudProps.PrivateNetworkOnlyFlag,
-		PrimaryNetworkComponent:        &cloudProps.PrimaryNetworkComponent,
-		PrimaryBackendNetworkComponent: &cloudProps.PrimaryBackendNetworkComponent,
-
-		UserData: []sldatatypes.UserData{
-			sldatatypes.UserData{
-				Value: userData,
-			},
-		},
+		PrivateNetworkOnlyFlag:         publicNetworkComponent == nil,
+		PrimaryNetworkComponent:        publicNetworkComponent,
+		PrimaryBackendNetworkComponent: privateNetworkComponent,
 	}
 
 	return virtualGuestTemplate, nil
@@ -121,7 +90,7 @@ func CreateAgentUserData(agentID string, cloudProps VMCloudProperties, networks 
 	return agentEnv
 }
 
-func CreateUserDataForInstance(agentID string, networks Networks, registryOptions RegistryOptions) string {
+func CreateUserDataForInstance(agentID string, registryOptions RegistryOptions) (string, error) {
 	serverName := fmt.Sprintf("vm-%s", agentID)
 	userDataContents := UserDataContentsType{
 		Registry: RegistryType{
@@ -135,8 +104,12 @@ func CreateUserDataForInstance(agentID string, networks Networks, registryOption
 			Name: serverName,
 		},
 	}
-	contentsBytes, _ := json.Marshal(userDataContents)
-	return string(contentsBytes)
+	contentsBytes, err := json.Marshal(userDataContents)
+	if err != nil {
+		return "", bosherr.WrapError(err, "Preparing user data contents")
+	}
+
+	return base64.RawURLEncoding.EncodeToString(contentsBytes), nil
 }
 
 func UpdateDavConfig(config *DavConfig, directorIP string) (err error) {

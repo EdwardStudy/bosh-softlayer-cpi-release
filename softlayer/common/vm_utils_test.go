@@ -273,7 +273,6 @@ var _ = Describe("VM Utils", func() {
 
 						DNS:           []string{"fake-dns"},
 						Default:       []string{"fake-default"},
-						Preconfigured: true,
 
 						CloudProperties: map[string]interface{}{
 							"PrimaryNetworkComponent": map[string]interface{}{
@@ -396,7 +395,6 @@ var _ = Describe("VM Utils", func() {
 
 						DNS:           []string{"fake-dns"},
 						Default:       []string{"fake-default"},
-						Preconfigured: true,
 
 						CloudProperties: map[string]interface{}{
 							"PrimaryBackendNetworkComponent": map[string]interface{}{
@@ -519,7 +517,6 @@ var _ = Describe("VM Utils", func() {
 
 						DNS:           []string{"fake-dns"},
 						Default:       []string{"fake-default"},
-						Preconfigured: true,
 
 						CloudProperties: map[string]interface{}{
 							"PrimaryNetworkComponent": map[string]interface{}{
