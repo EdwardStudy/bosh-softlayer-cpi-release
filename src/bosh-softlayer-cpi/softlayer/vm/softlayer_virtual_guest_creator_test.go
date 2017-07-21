@@ -99,7 +99,7 @@ var _ = Describe("SoftLayer_Virtual_Guest_Creator", func() {
 						}
 					})
 
-					It("returns a new SoftLayerVM with ephemeral size", func() {
+					FIt("returns a new SoftLayerVM with ephemeral size", func() {
 						cloudProps = VMCloudProperties{
 							StartCpus: 4,
 							MaxMemory: 2048,
@@ -823,15 +823,29 @@ func setFakeSoftlayerClientCreateObjectTestFixturesWithEphemeralDiskSize(fakeSof
 func setFakeSoftlayerClientCreateObjectTestFixturesWithEphemeralDiskSize_OS_Reload(fakeSoftLayerClient *fakeslclient.FakeSoftLayerClient) {
 	fileNames := []string{
 		"SoftLayer_Virtual_Guest_Service_getObjects.json",
-		"SoftLayer_Virtual_Guest_Service_editObject.json",
-		"SoftLayer_Virtual_Guest_Service_getLastTransaction.json",
+
 		"SoftLayer_Virtual_Guest_Service_getActiveTransactions_None.json",
+		"SoftLayer_Product_Package_getAllObjects_virtual_server.json",
+		"SoftLayer_Product_Package_getItems.json",
+
 		"SoftLayer_Virtual_Guest_Service_getUpgradeItemPrices.json",
 		"SoftLayer_Virtual_Guest_Service_getLocalDiskFlag_local.json",
 		"SoftLayer_Product_Order_Service_placeOrder.json",
 		"SoftLayer_Virtual_Guest_Service_getActiveTransactions.json",
 		"SoftLayer_Virtual_Guest_Service_getActiveTransactions_None.json",
 		"SoftLayer_Virtual_Guest_Service_getLastTransaction_CloudInstanceUpgrade.json",
+		"SoftLayer_Virtual_Guest_Service_getActiveTransactions_None.json",
+
+
+        "SoftLayer_Product_Order_PlaceContainerOrderVirtualGuestUpgrade.json",
+
+		"SoftLayer_Virtual_Guest_Service_getActiveTransactions.json",
+		"SoftLayer_Virtual_Guest_Service_getActiveTransactions_None.json",
+
+		"SoftLayer_Virtual_Guest_Service_getObject.json",
+		"SoftLayer_Virtual_Guest_Service_getLastTransaction.json",
+		"SoftLayer_Virtual_Guest_Service_getActiveTransaction.json",
+
 		"SoftLayer_Virtual_Guest_Service_getPowerState.json",
 		"SoftLayer_Virtual_Guest_Service_getBlockDevices.json",
 

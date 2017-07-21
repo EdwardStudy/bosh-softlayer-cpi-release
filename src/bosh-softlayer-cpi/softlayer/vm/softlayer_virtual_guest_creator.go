@@ -118,11 +118,11 @@ func (c *softLayerVirtualGuestCreator) WaitInstanceUntilReady(id int, until time
 
 		lastReload, err := virtualGuestService.GetLastTransaction(id)
 		if err != nil {
-			return err
+			return bosherr.WrapErrorf(err, "Getting last transaction of '%d'", id)
 		}
 		activeTxn, err := virtualGuestService.GetActiveTransaction(id)
 		if err != nil {
-			return err
+			return bosherr.WrapErrorf(err, "Getting active transaction of '%d'", id)
 		}
 
 		virtualGuestService.GetPowerState(id)
@@ -133,7 +133,7 @@ func (c *softLayerVirtualGuestCreator) WaitInstanceUntilReady(id int, until time
 		if !reloading {
 			powerState, err := virtualGuestService.GetPowerState(id)
 			if err != nil {
-				return err
+				return bosherr.WrapErrorf(err, "Getting power state of '%d'", id)
 			}
 			if powerState.KeyName == "RUNNING" {
 				return nil
@@ -222,18 +222,18 @@ func (c *softLayerVirtualGuestCreator) UpgradeInstance(id int, cpu int, memory i
 	}
 
 	packageType := "VIRTUAL_SERVER_INSTANCE"
-	productPackages, err := productPackageService.GetPackagesByType("packageType")
+	productPackages, err := productPackageService.GetPackagesByType(packageType)
 
 	if err != nil {
-		return &datatypes.SoftLayer_Container_Product_Order_Receipt{}, err
+		return &datatypes.SoftLayer_Container_Product_Order_Receipt{}, bosherr.WrapErrorf(err, "Getting package info by type: '%s'", packageType)
 	}
 	if len(productPackages) == 0 {
-		return &datatypes.SoftLayer_Container_Product_Order_Receipt{}, bosherr.Errorf("No package found for type: %s", packageType)
+		return &datatypes.SoftLayer_Container_Product_Order_Receipt{}, bosherr.WrapErrorf(err, "No package found for type: '%s'", packageType)
 	}
 	packageID := productPackages[0].Id
 	packageItems, err := productPackageService.GetItems(packageID, "")
 	if err != nil {
-		return &datatypes.SoftLayer_Container_Product_Order_Receipt{}, err
+		return &datatypes.SoftLayer_Container_Product_Order_Receipt{}, bosherr.WrapErrorf(err, "Getting package items of '%d'", packageID)
 	}
 	var prices = make([]datatypes.SoftLayer_Product_Item_Price, 0)
 	for option, value := range upgradeOptions {
@@ -248,7 +248,7 @@ func (c *softLayerVirtualGuestCreator) UpgradeInstance(id int, cpu int, memory i
 	if additional_diskSize != 0 {
 		diskItemPrice, err := c.getUpgradeItemPriceForSecondDisk(id, additional_diskSize)
 		if err != nil {
-			return &datatypes.SoftLayer_Container_Product_Order_Receipt{}, err
+			return &datatypes.SoftLayer_Container_Product_Order_Receipt{}, bosherr.WrapErrorf(err, "Getting upgrade item price for second disk of '%d'", id)
 		}
 		prices = append(prices, *diskItemPrice)
 	}
@@ -285,7 +285,7 @@ func (c *softLayerVirtualGuestCreator) UpgradeInstance(id int, cpu int, memory i
 	}
 	orderReceipt, err := productOrderService.PlaceContainerOrderVirtualGuestUpgrade(upgradeOrder)
 	if err != nil {
-		return &datatypes.SoftLayer_Container_Product_Order_Receipt{}, err
+		return &datatypes.SoftLayer_Container_Product_Order_Receipt{}, bosherr.WrapErrorf(err, "Placing Container order to virtualGuest '%d'", upgradeOrder.PackageId)
 	}
 
 	return &orderReceipt, nil
@@ -412,7 +412,10 @@ func (c *softLayerVirtualGuestCreator) createByOSReload(agentID string, stemcell
 		return nil, bosherr.WrapError(err, "Failed to reload OS")
 	}
 
-	c.resizeByOrder(virtualGuest, vm.ID(), cloudProps)
+	err = c.resizeByOrder(virtualGuest, vm.ID(), cloudProps)
+	if err != nil {
+		return nil, bosherr.WrapErrorf(err, "Resizing vm of `%d`", vm.ID())
+	}
 
 	err = UpdateDeviceName(virtualGuest.Id, virtualGuestService, cloudProps)
 	if err != nil {
@@ -492,7 +495,7 @@ func (c *softLayerVirtualGuestCreator) resizeByOrder(vm datatypes.SoftLayer_Virt
 		vm.DedicatedAccountHostOnlyFlag != cloudProps.DedicatedAccountHostOnlyFlag {
 		err := c.UpgradeInstanceConfig(cid, cloudProps.StartCpus, cloudProps.MaxMemory, 0, cloudProps.DedicatedAccountHostOnlyFlag)
 		if err != nil {
-			return bosherr.WrapError(err, "Upgrading VM")
+			return bosherr.WrapErrorf(err, "Upgrading instance config of '%d' VM", cid)
 		}
 	}
 	return nil
@@ -506,7 +509,7 @@ func (c *softLayerVirtualGuestCreator) getUpgradeItemPriceForSecondDisk(id int, 
 
 	itemPrices, err := virtualGuestService.GetUpgradeItemPrices(id)
 	if err != nil {
-		return &datatypes.SoftLayer_Product_Item_Price{}, err
+		return &datatypes.SoftLayer_Product_Item_Price{}, bosherr.WrapErrorf(err, "Getting upgrade item prices of '%d'", id)
 	}
 
 	var currentDiskCapacity int
@@ -515,7 +518,7 @@ func (c *softLayerVirtualGuestCreator) getUpgradeItemPriceForSecondDisk(id int, 
 
 	diskTypeBool, err := virtualGuestService.GetLocalDiskFlag(id)
 	if err != nil {
-		return &datatypes.SoftLayer_Product_Item_Price{}, err
+		return &datatypes.SoftLayer_Product_Item_Price{}, bosherr.WrapErrorf(err, "Getting local disk flag of '%d'", id)
 	}
 
 	if diskTypeBool {
@@ -556,6 +559,7 @@ func (c *softLayerVirtualGuestCreator) getUpgradeItemPriceForSecondDisk(id int, 
 }
 
 func getPriceIdForUpgrade(packageItems []datatypes.SoftLayer_Product_Item, option string, value int, public bool) int {
+	//mistake
 	for _, item := range packageItems {
 		isPrivate := strings.HasPrefix(item.Description, "Private")
 		for _, price := range item.Prices {
