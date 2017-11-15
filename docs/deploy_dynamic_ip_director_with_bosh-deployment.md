@@ -27,7 +27,7 @@ The general way provided in [bosh-deployment](https://github.com/cloudfoundry/bo
     Generate deployment manifest with `bosh interpolate` command:
     ```bash
     bosh int /workspace/bosh-deployment/bosh.yml \
-        -o /workspace/bosh-deployment/softlayer/cpi_dynamic.yml \
+        -o /workspace/bosh-deployment/softlayer/cpi-dynamic.yml \
         --vars-store credentials.yml \
         -v sl_vm_name_prefix=<director_hostname> \
         -v sl_vm_domain=<director_domain>  \
@@ -37,7 +37,7 @@ The general way provided in [bosh-deployment](https://github.com/cloudfoundry/bo
         -v sl_vlan_public=<sl_vlan_public> \
         -v sl_vlan_private=<sl_vlan_private> \
         -v director_name=<director_name> \
-        -v internal_ip=<director_hostname>.<director_domain> > director_dynamic.yml
+        -v internal_ip=<director_hostname>.<director_domain> > director-dynamic.yml
     ```
   
 2. Deployment  
